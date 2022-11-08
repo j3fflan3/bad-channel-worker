@@ -8,29 +8,74 @@ import (
 
 const customerThreadPool int = 10
 const numOfCustomers int = 999
+const (
+	succeed = "\u2713"
+	failed  = "\u2717"
+)
 
-func main() {
-	log.Println("compute should return 97, got ", compute())
-	var consumerGroup sync.WaitGroup
-	consumerGroup.Add(customerThreadPool)
-	custLen, _ := compute2(&consumerGroup)
-	log.Printf("compute2 should return %v, got %v\n", numOfCustomers, custLen)
-	// for cust := range custs {
-	// 	log.Printf("%v\n", cust)
-	// }
-	custLen2, _ := compute3()
-	log.Printf("compute3 should return %v, got %v\n", numOfCustomers, custLen2)
-	// for cust := range custs2 {
-	// 	log.Printf("%v\n", cust)
-	// }
-	custLen3, _ := compute4()
-	log.Printf("compute4 should return %v, got %v\n", numOfCustomers, custLen3)
+type ComputeResults struct {
+	Compute1 int
+	Compute2 int
+	Compute3 int
+	Compute4 int
 }
 
-func compute() int {
+type TestResults struct {
+	Compute1 string
+	Compute2 string
+	Compute3 string
+	Compute4 string
+}
+
+func main() {
+	var results []ComputeResults
+	for i := 0; i < 10; i++ {
+		var result ComputeResults
+		result.Compute1 = compute1()
+		var consumerGroup sync.WaitGroup
+		consumerGroup.Add(customerThreadPool)
+		result.Compute2, _ = compute2(&consumerGroup)
+		result.Compute3, _ = compute3()
+		result.Compute4, _ = compute4()
+		results = append(results, result)
+		resetArrays()
+	}
+	var expected ComputeResults
+	expected.Compute1 = numOfCustomers
+	expected.Compute2 = numOfCustomers
+	expected.Compute3 = numOfCustomers
+	expected.Compute4 = numOfCustomers
+	tr := TestResults{Compute1: succeed, Compute2: succeed, Compute3: succeed, Compute4: succeed}
+	for _, test := range results {
+		if test.Compute1 != expected.Compute1 && tr.Compute1 == succeed {
+			tr.Compute1 = failed
+			//log.Println(test.Compute1)
+		}
+		if test.Compute2 != expected.Compute2 && tr.Compute2 == succeed {
+			tr.Compute2 = failed
+			//log.Println(test.Compute2)
+		}
+		if test.Compute3 != expected.Compute3 && tr.Compute3 == succeed {
+			tr.Compute3 = failed
+			//log.Println(test.Compute3)
+		}
+		if test.Compute4 != expected.Compute4 && tr.Compute4 == succeed {
+			tr.Compute4 = failed
+			//log.Println(test.Compute4)
+		}
+	}
+	log.Println("Ran each test 10x")
+	log.Printf("Compute1 %v\n", tr.Compute1)
+	log.Printf("Compute2 %v\n", tr.Compute2)
+	log.Printf("Compute3 %v\n", tr.Compute3)
+	log.Printf("Compute4 %v\n", tr.Compute4)
+
+}
+
+func compute1() int {
 	count := map[string]int{}
-	countChannel := make(chan int, 10)
-	resultChan := make(chan bool, 97)
+	countChannel := make(chan int, numOfCustomers)
+	resultChan := make(chan bool, numOfCustomers)
 
 	go func() {
 		for countItem := range countChannel {
@@ -48,14 +93,14 @@ func compute() int {
 		go func(i int) {
 			defer lock.Done()
 			// If you uncomment the line below, you will get inconsistent results
-			log.Println(i)
+			// log.Println(i)
 			countChannel <- i
 		}(i)
 	}
 
-	log.Println("waiting on lock...")
+	//log.Println("waiting on lock...")
 	lock.Wait()
-	log.Println("closing channel")
+	//log.Println("closing channel")
 	close(countChannel)
 	// for n := 0; n < 97; n++ {
 	// 	<-resultChan
@@ -109,7 +154,6 @@ func compute2(consumerGroup *sync.WaitGroup) (int, []int) {
 				// }
 				c := cust
 				custLock.Customers = append(custLock.Customers, c)
-
 				results <- true
 			}
 		}()
@@ -129,6 +173,10 @@ type Customers struct {
 var ACustomers Customers
 var ACustomers2 Customers
 
+func resetArrays() {
+	ACustomers = Customers{}
+	ACustomers2 = Customers{}
+}
 func computeWorkerNoLock(id int, jobs <-chan int, results chan<- bool) {
 	for job := range jobs {
 		//log.Printf("worker %v, job %v", id, job)
