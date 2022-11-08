@@ -109,6 +109,7 @@ func compute2(consumerGroup *sync.WaitGroup) (int, []int) {
 				// }
 				c := cust
 				custLock.Customers = append(custLock.Customers, c)
+
 				results <- true
 			}
 		}()
