@@ -47,6 +47,7 @@ func compute() int {
 		lock.Add(1)
 		go func(i int) {
 			defer lock.Done()
+			// If you uncomment the line below, you will get inconsistent results
 			log.Println(i)
 			countChannel <- i
 		}(i)
@@ -86,6 +87,7 @@ func compute2(consumerGroup *sync.WaitGroup) (int, []int) {
 		go func() {
 			defer consumerGroup.Done()
 			for cust := range customerChannel {
+				/* IF YOU UNCOMMENT THESE LINES, IT WILL SEEM TO WORK - DANGER! */
 				// for j := 0; j < 21; j++ {
 				// 	count := 0
 				// 	for count < 2 {
@@ -105,10 +107,9 @@ func compute2(consumerGroup *sync.WaitGroup) (int, []int) {
 				// 		}
 				// 	}
 				// }
-				//custLock.Mu.Lock()
 				c := cust
 				custLock.Customers = append(custLock.Customers, c)
-				//custLock.Mu.Unlock()
+
 				results <- true
 			}
 		}()
