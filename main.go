@@ -15,10 +15,16 @@ const (
 )
 
 type ComputeResults struct {
-	Compute1 int
-	Compute2 int
-	Compute3 int
-	Compute4 int
+	Compute1  int
+	MCompute1 map[string]int
+	Compute2  int
+	ACompute2 []int
+	Compute3  int
+	ACompute3 []int
+	Compute4  int
+	ACompute4 []int
+	Compute5  int
+	ACompute5 []int
 }
 
 type TestResults struct {
@@ -26,18 +32,20 @@ type TestResults struct {
 	Compute2 string
 	Compute3 string
 	Compute4 string
+	Compute5 string
 }
 
 func main() {
 	var results []ComputeResults
 	for i := 0; i < 10; i++ {
 		var result ComputeResults
-		result.Compute1 = compute1()
+		result.Compute1, result.MCompute1 = compute1()
 		var consumerGroup sync.WaitGroup
 		consumerGroup.Add(customerThreadPool)
-		result.Compute2, _ = compute2(&consumerGroup)
-		result.Compute3, _ = compute3()
-		result.Compute4, _ = compute4()
+		result.Compute2, result.ACompute2 = compute2(&consumerGroup)
+		result.Compute3, result.ACompute3 = compute3()
+		result.Compute4, result.ACompute4 = compute4()
+		result.Compute5, result.ACompute5 = compute5()
 		results = append(results, result)
 		resetArrays()
 	}
@@ -46,36 +54,57 @@ func main() {
 	expected.Compute2 = numOfCustomers
 	expected.Compute3 = numOfCustomers
 	expected.Compute4 = numOfCustomers
+	expected.Compute5 = numOfCustomers
 	succeeded := fmt.Sprintf("Succeeded! %v", succeed)
 	failure := fmt.Sprintf("Failed! %v", failed)
-	tr := TestResults{Compute1: succeeded, Compute2: succeeded, Compute3: succeeded, Compute4: succeeded}
+	tr := TestResults{Compute1: succeeded,
+		Compute2: succeeded,
+		Compute3: succeeded,
+		Compute4: succeeded,
+		Compute5: succeeded,
+	}
+	var c1, c2, c3, c4, c5 []int
 	for _, test := range results {
+		val1 := test.Compute1
+		c1 = append(c1, val1)
 		if test.Compute1 != expected.Compute1 && tr.Compute1 == succeeded {
 			tr.Compute1 = failure
 			//log.Println(test.Compute1)
 		}
+		val2 := test.Compute2
+		c2 = append(c2, val2)
 		if test.Compute2 != expected.Compute2 && tr.Compute2 == succeeded {
 			tr.Compute2 = failure
 			//log.Println(test.Compute2)
 		}
+		val3 := test.Compute3
+		c3 = append(c3, val3)
 		if test.Compute3 != expected.Compute3 && tr.Compute3 == succeeded {
 			tr.Compute3 = failure
 			//log.Println(test.Compute3)
 		}
+		val4 := test.Compute4
+		c4 = append(c4, val4)
 		if test.Compute4 != expected.Compute4 && tr.Compute4 == succeeded {
 			tr.Compute4 = failure
 			//log.Println(test.Compute4)
 		}
+		val5 := test.Compute5
+		c5 = append(c5, val5)
+		if test.Compute5 != expected.Compute5 && tr.Compute5 == succeeded {
+			tr.Compute5 = failure
+			//log.Println(test.Compute4)
+		}
 	}
 	log.Println("Ran each test 10x")
-	log.Printf("Compute1 %v\n", tr.Compute1)
-	log.Printf("Compute2 %v\n", tr.Compute2)
-	log.Printf("Compute3 %v\n", tr.Compute3)
-	log.Printf("Compute4 %v\n", tr.Compute4)
-
+	log.Printf("Compute1 %v\tExpected all %v, got %v\n", tr.Compute1, expected.Compute1, c1)
+	log.Printf("Compute2 %v\tExpected all %v, got %v\n", tr.Compute2, expected.Compute2, c2)
+	log.Printf("Compute3 %v\tExpected all %v, got %v\n", tr.Compute3, expected.Compute3, c3)
+	log.Printf("Compute4 %v\tExpected all %v, got %v\n", tr.Compute4, expected.Compute4, c4)
+	log.Printf("Compute5 %v\tExpected all %v, got %v\n", tr.Compute5, expected.Compute5, c5)
 }
 
-func compute1() int {
+func compute1() (int, map[string]int) {
 	count := map[string]int{}
 	countChannel := make(chan int, numOfCustomers)
 	resultChan := make(chan bool, numOfCustomers)
@@ -83,15 +112,12 @@ func compute1() int {
 	go func() {
 		for countItem := range countChannel {
 			count[strconv.Itoa(countItem)] = countItem
-			// if countItem == 73 {
-			// 	time.Sleep(10 * time.Second)
-			// }
 			resultChan <- true
 		}
 	}()
 
 	var lock sync.WaitGroup
-	for i := 0; i < 97; i++ {
+	for i := 0; i < numOfCustomers; i++ {
 		lock.Add(1)
 		go func(i int) {
 			defer lock.Done()
@@ -101,23 +127,12 @@ func compute1() int {
 		}(i)
 	}
 
-	//log.Println("waiting on lock...")
 	lock.Wait()
-	//log.Println("closing channel")
 	close(countChannel)
 	// for n := 0; n < 97; n++ {
 	// 	<-resultChan
 	// }
-	// intslice := []int{}
-	// for _, v := range count {
-	// 	v := v
-	// 	intslice = append(intslice, v)
-	// }
-	// sort.IntSlice(intslice).Sort()
-	// for item := range intslice {
-	// 	log.Println(item)
-	// }
-	return len(count)
+	return len(count), count
 }
 
 func compute2(consumerGroup *sync.WaitGroup) (int, []int) {
@@ -183,9 +198,7 @@ func resetArrays() {
 func computeWorkerNoLock(id int, jobs <-chan int, results chan<- bool) {
 	for job := range jobs {
 		//log.Printf("worker %v, job %v", id, job)
-		//ACustomers.Mu.Lock()
 		ACustomers.Customers = append(ACustomers.Customers, job)
-		//ACustomers.Mu.Unlock()
 		results <- true
 	}
 }
@@ -233,4 +246,41 @@ func compute4() (int, []int) {
 		<-results
 	}
 	return len(ACustomers2.Customers), ACustomers2.Customers
+}
+
+func compute5() (int, []int) {
+	// Our customer array we want to populate
+	var aCustomers Customers
+	// The job and results channels
+	jobs := make(chan int, numOfCustomers)
+	results := make(chan bool, numOfCustomers)
+
+	// Spawn worker routines
+	for n := 0; n < customerThreadPool; n++ {
+		go func(id int, jobs <-chan int, results chan<- bool) {
+			for job := range jobs {
+				//log.Printf("worker %v, job %v", id, job)
+				aCustomers.Mu.Lock()
+				aCustomers.Customers = append(aCustomers.Customers, job)
+				aCustomers.Mu.Unlock()
+				results <- true
+			}
+
+		}(n, jobs, results)
+	}
+
+	// Load jobs buffer
+	for i := 0; i < numOfCustomers; i++ {
+		n := i
+		jobs <- n
+	}
+	// Close jobs chan
+	close(jobs)
+
+	// loop and block until all results come back
+	for j := 0; j < numOfCustomers; j++ {
+		<-results
+	}
+	// return our results
+	return len(aCustomers.Customers), aCustomers.Customers
 }
