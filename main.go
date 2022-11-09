@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"strconv"
 	"sync"
@@ -45,22 +46,24 @@ func main() {
 	expected.Compute2 = numOfCustomers
 	expected.Compute3 = numOfCustomers
 	expected.Compute4 = numOfCustomers
-	tr := TestResults{Compute1: succeed, Compute2: succeed, Compute3: succeed, Compute4: succeed}
+	succeeded := fmt.Sprintf("Succeeded! %v", succeed)
+	failure := fmt.Sprintf("Failed! %v", failed)
+	tr := TestResults{Compute1: succeeded, Compute2: succeeded, Compute3: succeeded, Compute4: succeeded}
 	for _, test := range results {
-		if test.Compute1 != expected.Compute1 && tr.Compute1 == succeed {
-			tr.Compute1 = failed
+		if test.Compute1 != expected.Compute1 && tr.Compute1 == succeeded {
+			tr.Compute1 = failure
 			//log.Println(test.Compute1)
 		}
-		if test.Compute2 != expected.Compute2 && tr.Compute2 == succeed {
-			tr.Compute2 = failed
+		if test.Compute2 != expected.Compute2 && tr.Compute2 == succeeded {
+			tr.Compute2 = failure
 			//log.Println(test.Compute2)
 		}
-		if test.Compute3 != expected.Compute3 && tr.Compute3 == succeed {
-			tr.Compute3 = failed
+		if test.Compute3 != expected.Compute3 && tr.Compute3 == succeeded {
+			tr.Compute3 = failure
 			//log.Println(test.Compute3)
 		}
-		if test.Compute4 != expected.Compute4 && tr.Compute4 == succeed {
-			tr.Compute4 = failed
+		if test.Compute4 != expected.Compute4 && tr.Compute4 == succeeded {
+			tr.Compute4 = failure
 			//log.Println(test.Compute4)
 		}
 	}
