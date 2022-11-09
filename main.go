@@ -19,6 +19,7 @@ type ComputeResults struct {
 	Compute2 int
 	Compute3 int
 	Compute4 int
+	Compute5 int
 }
 
 type TestResults struct {
@@ -26,6 +27,7 @@ type TestResults struct {
 	Compute2 string
 	Compute3 string
 	Compute4 string
+	Compute5 string
 }
 
 func main() {
@@ -38,6 +40,7 @@ func main() {
 		result.Compute2, _ = compute2(&consumerGroup)
 		result.Compute3, _ = compute3()
 		result.Compute4, _ = compute4()
+		result.Compute5, _ = compute5()
 		results = append(results, result)
 		resetArrays()
 	}
@@ -46,9 +49,15 @@ func main() {
 	expected.Compute2 = numOfCustomers
 	expected.Compute3 = numOfCustomers
 	expected.Compute4 = numOfCustomers
+	expected.Compute5 = numOfCustomers
 	succeeded := fmt.Sprintf("Succeeded! %v", succeed)
 	failure := fmt.Sprintf("Failed! %v", failed)
-	tr := TestResults{Compute1: succeeded, Compute2: succeeded, Compute3: succeeded, Compute4: succeeded}
+	tr := TestResults{Compute1: succeeded,
+		Compute2: succeeded,
+		Compute3: succeeded,
+		Compute4: succeeded,
+		Compute5: succeeded,
+	}
 	for _, test := range results {
 		if test.Compute1 != expected.Compute1 && tr.Compute1 == succeeded {
 			tr.Compute1 = failure
@@ -66,13 +75,17 @@ func main() {
 			tr.Compute4 = failure
 			//log.Println(test.Compute4)
 		}
+		if test.Compute5 != expected.Compute5 && tr.Compute5 == succeeded {
+			tr.Compute5 = failure
+			//log.Println(test.Compute4)
+		}
 	}
 	log.Println("Ran each test 10x")
 	log.Printf("Compute1 %v\n", tr.Compute1)
 	log.Printf("Compute2 %v\n", tr.Compute2)
 	log.Printf("Compute3 %v\n", tr.Compute3)
 	log.Printf("Compute4 %v\n", tr.Compute4)
-
+	log.Printf("Compute5 %v\n", tr.Compute5)
 }
 
 func compute1() int {
@@ -233,4 +246,41 @@ func compute4() (int, []int) {
 		<-results
 	}
 	return len(ACustomers2.Customers), ACustomers2.Customers
+}
+
+func compute5() (int, []int) {
+	// Our customer array we want to populate
+	var aCustomers Customers
+	// The job and results channels
+	jobs := make(chan int, numOfCustomers)
+	results := make(chan bool, numOfCustomers)
+
+	// Spawn worker routines
+	for n := 0; n < customerThreadPool; n++ {
+		go func(id int, jobs <-chan int, results chan<- bool) {
+			for job := range jobs {
+				//log.Printf("worker %v, job %v", id, job)
+				aCustomers.Mu.Lock()
+				aCustomers.Customers = append(aCustomers.Customers, job)
+				aCustomers.Mu.Unlock()
+				results <- true
+			}
+
+		}(n, jobs, results)
+	}
+
+	// Load jobs buffer
+	for i := 0; i < numOfCustomers; i++ {
+		n := i
+		jobs <- n
+	}
+	// Close jobs chan
+	close(jobs)
+
+	// loop and block until all results come back
+	for j := 0; j < numOfCustomers; j++ {
+		<-results
+	}
+	// return our results
+	return len(aCustomers.Customers), aCustomers.Customers
 }
